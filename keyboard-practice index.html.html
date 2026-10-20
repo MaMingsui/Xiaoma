@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>键盘打字练习</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            text-align: center; color: #333; margin-bottom: 10px; font-size: 2.2em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* ===== 页面切换 ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 20px; border: 2px solid #667eea; border-radius: 10px;
+            background: white; color: #667eea; font-size: 14px; font-weight: bold;
+            cursor: pointer; transition: all .3s; margin-bottom: 20px;
+        }
+        .back-btn:hover { background: #667eea; color: white; }
+
+        /* ===== 语言切换 ===== */
+        .lang-switch { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+        .lang-btn {
+            padding: 8px 20px; border: 2px solid #667eea; border-radius: 20px;
+            background: white; color: #667eea; font-size: 14px; font-weight: bold;
+            cursor: pointer; transition: all .3s;
+        }
+        .lang-btn.active { background: #667eea; color: white; }
+        .lang-btn:hover:not(.active) { background: #f0f0ff; }
+
+        /* ===== 总览页 - 关卡网格 ===== */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .overview-card {
+            background: #f8f9fa;
+            border: 3px solid #e9ecef;
+            border-radius: 16px;
+            padding: 22px 20px;
+            cursor: pointer;
+            transition: all .3s;
+            position: relative;
+        }
+        .overview-card:hover { border-color: #667eea; transform: translateY(-4px); box-shadow: 0 8px 25px rgba(102,126,234,.15); }
+        .overview-card.locked { opacity: .45; cursor: not-allowed; }
+        .overview-card.locked:hover { transform: none; border-color: #e9ecef; box-shadow: none; }
+        .overview-card.completed { border-color: #28a745; }
+        .overview-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .ov-num {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; font-weight: bold; font-size: 16px; flex-shrink: 0;
+        }
+        .overview-card.locked .ov-num { background: #aaa; }
+        .overview-card.completed .ov-num { background: #28a745; }
+        .ov-title { font-weight: bold; font-size: 17px; color: #333; }
+        .ov-keys {
+            font-size: 13px; color: #888; font-family: 'Consolas', monospace;
+            letter-spacing: 1px; margin-bottom: 6px;
+        }
+        .ov-desc { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+        .ov-progress { margin-top: 8px; }
+        .ov-progress-bar {
+            height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden; margin-bottom: 6px;
+        }
+        .ov-progress-fill {
+            height: 100%; background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 3px; transition: width .3s;
+        }
+        .ov-rounds {
+            display: flex; gap: 6px; align-items: center; font-size: 12px; color: #888;
+        }
+        .ov-round-dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: bold; background: #e9ecef; color: #aaa;
+        }
+        .ov-round-dot.done { background: #28a745; color: white; }
+        .ov-round-dot.partial { background: #ffc107; color: white; }
+        .ov-stars { color: #ffc107; font-size: 13px; margin-top: 4px; }
+
+        /* ===== 详情页 ===== */
+        .detail-header {
+            display: flex; align-items: center; gap: 16px;
+            padding: 20px; background: #f8f9fa; border-radius: 14px; margin-bottom: 20px;
+        }
+        .detail-num {
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; font-weight: bold; font-size: 22px; flex-shrink: 0;
+        }
+        .detail-info { flex: 1; }
+        .detail-title { font-size: 22px; font-weight: bold; color: #333; }
+        .detail-keys { font-size: 14px; color: #888; font-family: 'Consolas', monospace; margin-top: 2px; }
+        .detail-desc { font-size: 13px; color: #aaa; margin-top: 2px; }
+
+        /* 局数选择 */
+        .round-tabs {
+            display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;
+        }
+        .round-tab {
+            padding: 12px 28px; border: 3px solid #e9ecef; border-radius: 12px;
+            background: white; cursor: pointer; transition: all .3s;
+            text-align: center; min-width: 140px;
+        }
+        .round-tab:hover { border-color: #667eea; }
+        .round-tab.active { border-color: #667eea; background: #f0f0ff; }
+        .round-tab.locked { opacity: .4; cursor: not-allowed; }
+        .round-tab.locked:hover { border-color: #e9ecef; }
+        .round-tab.completed { border-color: #28a745; }
+        .round-tab-name { font-weight: bold; font-size: 15px; color: #333; }
+        .round-tab-stars { color: #ffc107; font-size: 13px; margin-top: 4px; }
+
+        /* 按钮 */
+        .btn-row { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; }
+        button {
+            padding: 12px 24px; border: none; border-radius: 10px;
+            font-size: 16px; cursor: pointer; transition: all .3s; font-weight: bold;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102,126,234,.4); }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+
+        /* ===== 自由练习设置 ===== */
+        .settings {
+            display: flex; flex-wrap: wrap; gap: 20px;
+            justify-content: center; margin-bottom: 25px;
+            padding: 20px; background: #f8f9fa; border-radius: 15px;
+        }
+        .setting-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .setting-group label { font-weight: bold; color: #555; font-size: 14px; }
+        select {
+            padding: 12px 24px; border: 2px solid #667eea; border-radius: 10px;
+            font-size: 16px; cursor: pointer; background: white; color: #333; min-width: 150px;
+            transition: all .3s;
+        }
+        select:focus { outline: none; border-color: #764ba2; box-shadow: 0 0 10px rgba(102,126,234,.3); }
+
+        /* ===== 统计卡片 ===== */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 14px; margin-bottom: 22px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 14px; border-radius: 15px; text-align: center; transition: transform .3s;
+        }
+        .stat-card:hover { transform: translateY(-4px); }
+        .stat-value {
+            font-size: 2em; font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .stat-label { color: #666; font-size: 12px; margin-top: 3px; }
+
+        /* ===== 打字区域 ===== */
+        .typing-area { background: #f8f9fa; border-radius: 15px; padding: 25px; margin-bottom: 20px; }
+        .text-display {
+            font-size: 1.6em; line-height: 1.8; margin-bottom: 18px;
+            padding: 20px; background: white; border-radius: 10px;
+            min-height: 80px; word-break: break-all;
+            font-family: 'Consolas', 'Microsoft YaHei', monospace;
+        }
+        .char { transition: all .1s; }
+        .char.correct { color: #28a745; }
+        .char.incorrect { color: #dc3545; background: #ffe0e0; border-radius: 3px; }
+        .char.current { background: #667eea; color: white; border-radius: 3px; animation: blink 1s infinite; }
+        @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:.7} }
+        #typing-input {
+            width: 100%; padding: 18px; font-size: 1.4em;
+            border: 3px solid #dee2e6; border-radius: 10px; outline: none;
+            transition: border-color .3s; font-family: 'Consolas', 'Microsoft YaHei', monospace;
+        }
+        #typing-input:focus { border-color: #667eea; box-shadow: 0 0 15px rgba(102,126,234,.2); }
+        #typing-input:disabled { background: #e9ecef; cursor: not-allowed; }
+        .progress-bar { height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 14px; overflow: hidden; }
+        .progress-fill {
+            height: 100%; background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px; transition: width .3s; width: 0%;
+        }
+
+        /* ===== 虚拟键盘 ===== */
+        .virtual-keyboard {
+            margin-top: 20px; background: #e9ecef; border-radius: 12px; padding: 16px 10px 12px;
+        }
+        .kb-row { display: flex; justify-content: center; gap: 4px; margin-bottom: 4px; }
+        .kb-key {
+            min-width: 42px; height: 42px;
+            display: flex; align-items: center; justify-content: center;
+            background: white; border: 2px solid #dee2e6; border-radius: 7px;
+            font-size: 14px; font-weight: bold; font-family: 'Consolas', monospace;
+            color: #555; transition: all .15s; user-select: none;
+        }
+        .kb-key.highlight {
+            background: #667eea; color: white; border-color: #667eea;
+            box-shadow: 0 0 12px rgba(102,126,234,.5); transform: scale(1.08);
+        }
+        .kb-key.dim { opacity: .3; }
+        .kb-key.pressed { background: #764ba2; color: white; border-color: #764ba2; transform: scale(.95); }
+        .kb-key.wide { min-width: 70px; font-size: 11px; }
+        .kb-key.wider { min-width: 100px; font-size: 11px; }
+        .kb-key.widest { min-width: 130px; font-size: 11px; }
+        .kb-key.space { min-width: 300px; font-size: 12px; }
+
+        /* ===== 手指颜色编码 ===== */
+        .kb-key.finger-lp { background: #ffe0e0; border-color: #f5c6c6; } /* 左小指 */
+        .kb-key.finger-lr { background: #ffeacc; border-color: #f5d9a8; } /* 左无名指 */
+        .kb-key.finger-lm { background: #fff5cc; border-color: #f0e6a8; } /* 左中指 */
+        .kb-key.finger-li { background: #e0f5e0; border-color: #c6e6c6; } /* 左食指 */
+        .kb-key.finger-lt { background: #e0f0f5; border-color: #c6dce6; } /* 左拇指 */
+        .kb-key.finger-rt { background: #e0e8f5; border-color: #c6d2e6; } /* 右拇指 */
+        .kb-key.finger-ri { background: #e0e0f5; border-color: #c6c6e6; } /* 右食指 */
+        .kb-key.finger-rm { background: #ece0f5; border-color: #dcc6e6; } /* 右中指 */
+        .kb-key.finger-rr { background: #f5e0f0; border-color: #e6c6dc; } /* 右无名指 */
+        .kb-key.finger-rp { background: #f5e0e5; border-color: #e6c6cc; } /* 右小指 */
+        /* 高亮时覆盖手指色 */
+        .kb-key.finger-lp.highlight, .kb-key.finger-lr.highlight, .kb-key.finger-lm.highlight,
+        .kb-key.finger-li.highlight, .kb-key.finger-lt.highlight, .kb-key.finger-rt.highlight,
+        .kb-key.finger-ri.highlight, .kb-key.finger-rm.highlight, .kb-key.finger-rr.highlight,
+        .kb-key.finger-rp.highlight {
+            background: #667eea; color: white; border-color: #667eea;
+            box-shadow: 0 0 12px rgba(102,126,234,.5); transform: scale(1.08);
+        }
+        .kb-key.finger-lp.pressed, .kb-key.finger-lr.pressed, .kb-key.finger-lm.pressed,
+        .kb-key.finger-li.pressed, .kb-key.finger-lt.pressed, .kb-key.finger-rt.pressed,
+        .kb-key.finger-ri.pressed, .kb-key.finger-rm.pressed, .kb-key.finger-rr.pressed,
+        .kb-key.finger-rp.pressed {
+            background: #764ba2; color: white; border-color: #764ba2; transform: scale(.95);
+        }
+        .kb-key.finger-lp.dim, .kb-key.finger-lr.dim, .kb-key.finger-lm.dim,
+        .kb-key.finger-li.dim, .kb-key.finger-lt.dim, .kb-key.finger-rt.dim,
+        .kb-key.finger-ri.dim, .kb-key.finger-rm.dim, .kb-key.finger-rr.dim,
+        .kb-key.finger-rp.dim { opacity: .3; }
+
+        /* 手指图例 */
+        .finger-legend {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 16px;
+            margin-top: 12px; padding: 10px 16px;
+            background: #f0f0f0; border-radius: 8px; font-size: 12px; color: #666;
+        }
+        .finger-legend-item { display: flex; align-items: center; gap: 4px; }
+        .finger-dot {
+            width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+        }
+        .finger-legend-sep { color: #ccc; margin: 0 4px; }
+
+        /* ===== 结果弹窗 ===== */
+        .result-modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,.7);
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .result-content {
+            background: white; padding: 40px; border-radius: 20px;
+            text-align: center; max-width: 520px; animation: slideIn .3s;
+        }
+        @keyframes slideIn { from{transform:translateY(-50px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .result-content h2 { color: #333; margin-bottom: 12px; font-size: 2em; }
+        .result-round-info { font-size: 15px; color: #667eea; margin-bottom: 12px; }
+        .result-stars { font-size: 36px; margin-bottom: 15px; }
+        .result-stats {
+            display: grid; grid-template-columns: repeat(2,1fr);
+            gap: 16px; margin-bottom: 20px;
+        }
+        .result-stat { padding: 16px; background: #f8f9fa; border-radius: 10px; }
+        .result-stat .value { font-size: 2em; font-weight: bold; color: #667eea; }
+        .result-stat .label { color: #666; font-size: 13px; }
+        .result-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .result-hint {
+            margin-top: 18px; padding: 12px; background: #f8f9fa;
+            border-radius: 10px; font-size: 13px; color: #888;
+        }
+        .result-hint kbd {
+            display: inline-block; padding: 3px 8px; background: white;
+            border: 1px solid #ddd; border-radius: 4px;
+            font-family: 'Consolas', monospace; font-size: 12px; margin: 0 2px;
+        }
+        .keyboard-hint { text-align: center; color: #888; margin-top: 14px; font-size: 13px; }
+        .keyboard-hint kbd {
+            display: inline-block; padding: 2px 6px; background: white;
+            border: 1px solid #ddd; border-radius: 4px;
+            font-family: 'Consolas', monospace; font-size: 12px;
+        }
+
+        /* ===== 模式切换标签 ===== */
+        .mode-tabs {
+            display: flex; justify-content: center; gap: 0;
+            margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 2px solid #667eea;
+        }
+        .mode-tab {
+            flex: 1; padding: 14px 20px; text-align: center;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            background: white; color: #667eea; border: none; transition: all .3s;
+        }
+        .mode-tab.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .mode-tab:hover:not(.active) { background: #f0f0ff; }
+
+        @media (max-width: 600px) {
+            .container { padding: 16px; }
+            h1 { font-size: 1.6em; }
+            .text-display { font-size: 1.2em; }
+            #typing-input { font-size: 1.1em; }
+            .overview-grid { grid-template-columns: 1fr; }
+            .kb-key { min-width: 28px; height: 34px; font-size: 11px; }
+            .kb-key.wide { min-width: 46px; }
+            .kb-key.wider { min-width: 64px; }
+            .kb-key.widest { min-width: 80px; }
+            .kb-key.space { min-width: 180px; }
+            .round-tabs { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⌨️ 键盘打字练习</h1>
+
+    <!-- 模式切换 -->
+    <div class="mode-tabs" id="mode-tabs">
+        <button class="mode-tab active" data-mode="stage">🎯 键盘闯关</button>
+        <button class="mode-tab" data-mode="free">📝 自由练习</button>
+    </div>
+
+    <!-- 语言切换 -->
+    <div class="lang-switch" id="lang-switch">
+        <button class="lang-btn active" data-lang="english">English</button>
+        <button class="lang-btn" data-lang="chinese">中文</button>
+        <button class="lang-btn" data-lang="mixed">混合</button>
+    </div>
+
+    <!-- ========== 页面1：总览页 ========== -->
+    <div class="page active" id="page-overview">
+        <div class="overview-grid" id="overview-grid"></div>
+    </div>
+
+    <!-- ========== 页面2：关卡详情页 ========== -->
+    <div class="page" id="page-detail">
+        <button class="back-btn" id="back-btn">← 返回总览</button>
+        <div class="detail-header" id="detail-header"></div>
+        <div class="round-tabs" id="round-tabs"></div>
+        <div class="btn-row">
+            <button class="btn-primary" id="start-btn">开始练习</button>
+            <button class="btn-secondary" id="reset-round-btn">重置本局</button>
+        </div>
+    </div>
+
+    <!-- ========== 页面3：自由练习 ========== -->
+    <div class="page" id="page-free">
+        <div class="settings">
+            <div class="setting-group">
+                <label>难度级别</label>
+                <select id="difficulty">
+                    <option value="easy">简单 - 常用词语</option>
+                    <option value="medium">中等 - 短句练习</option>
+                    <option value="hard">困难 - 长句文章</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>练习内容</label>
+                <select id="content-type">
+                    <option value="chinese">中文打字</option>
+                    <option value="english">英文打字</option>
+                    <option value="mixed">中英混合</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>操作</label>
+                <button class="btn-primary" id="free-start-btn">开始练习</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 通用：统计+打字区域+键盘 ========== -->
+    <div id="practice-section">
+        <div class="stats">
+            <div class="stat-card"><div class="stat-value" id="time">0</div><div class="stat-label">用时（秒）</div></div>
+            <div class="stat-card"><div class="stat-value" id="wpm">0</div><div class="stat-label">速度（字/分钟）</div></div>
+            <div class="stat-card"><div class="stat-value" id="accuracy">100%</div><div class="stat-label">正确率</div></div>
+            <div class="stat-card"><div class="stat-value" id="errors">0</div><div class="stat-label">错误次数</div></div>
+        </div>
+        <div class="typing-area">
+            <div class="text-display" id="text-display">
+                <span style="color:#888;">选择关卡或模式，点击"开始"</span>
+            </div>
+            <input type="text" id="typing-input" placeholder="在此输入..." disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="virtual-keyboard" id="virtual-keyboard">
+                <div class="kb-row" id="kb-row-0"></div>
+                <div class="kb-row" id="kb-row-1"></div>
+                <div class="kb-row" id="kb-row-2"></div>
+                <div class="kb-row" id="kb-row-3"></div>
+                <div class="kb-row" id="kb-row-4"></div>
+                <div class="finger-legend" id="finger-legend"></div>
+            </div>
+        </div>
+        <div class="keyboard-hint">💡 <kbd>R</kbd> 再来一次 | <kbd>N</kbd> 下一局/下一关 | <kbd>Esc</kbd> 返回</div>
+    </div>
+</div>
+
+<!-- 结果弹窗 -->
+<div class="result-modal" id="result-modal">
+    <div class="result-content">
+        <h2 id="result-title">🎉 练习完成！</h2>
+        <div class="result-round-info" id="result-round-info"></div>
+        <div class="result-stars" id="result-stars"></div>
+        <div class="result-stats">
+            <div class="result-stat"><div class="value" id="final-time">0</div><div class="label">总用时（秒）</div></div>
+            <div class="result-stat"><div class="value" id="final-wpm">0</div><div class="label">打字速度</div></div>
+            <div class="result-stat"><div class="value" id="final-accuracy">0%</div><div class="label">正确率</div></div>
+            <div class="result-stat"><div class="value" id="final-errors">0</div><div class="label">错误次数</div></div>
+        </div>
+        <div class="result-buttons">
+            <button class="btn-secondary" id="retry-btn">再来一次 (R)</button>
+            <button class="btn-success" id="next-round-btn" style="display:none;">下一局 →</button>
+            <button class="btn-primary" id="next-stage-btn" style="display:none;">下一关 (N) →</button>
+        </div>
+        <div class="result-hint">
+            快捷键：<kbd>R</kbd> 再来一次 | <kbd>N</kbd> 下一局/下一关 | <kbd>Esc</kbd> 返回
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== 关卡定义 ====================
+const STAGES = [
+    { id:1, title:'基础定位键', keys:'F J', desc:'食指归位，找到凸点',
+      pool: { en:'fj', zh:'发家', mix:'f发j家' } },
+    { id:2, title:'主行左手', keys:'A S D F G', desc:'左手五指覆盖区域',
+      pool: { en:'asdfg', zh:'啊是大发个', mix:'a啊s是d大f发g个' } },
+    { id:3, title:'主行右手', keys:'H J K L ;', desc:'右手四指覆盖区域',
+      pool: { en:'hjkl;', zh:'好就可了；', mix:'h好j就k可l了;；' } },
+    { id:4, title:'主行全键', keys:'A-; 主行', desc:'双手配合，主行全覆盖',
+      pool: { en:'asdfghjkl;', zh:'啊是大发个好就可了；', mix:'asdf好就可了hjkl啊是的' } },
+    { id:5, title:'上排字母', keys:'Q W E R T Y U I O P', desc:'手指上移，练习上排',
+      pool: { en:'qwertyuiop', zh:'去我而人他你我哦品', mix:'q去w我e而r人t他y你u我i我o哦p品' } },
+    { id:6, title:'下排字母', keys:'Z X C V B N M', desc:'手指下移，练习下排',
+      pool: { en:'zxcvbnm', zh:'在小吃不没吧吗', mix:'z在x小c吃v不b吧n吗m没' } },
+    { id:7, title:'字母全混合', keys:'A-Z 全部', desc:'所有字母键综合练习',
+      pool: { en:'abcdefghijklmnopqrstuvwxyz', zh:'', mix:'' } },
+    { id:8, title:'数字与符号', keys:'0-9 符号', desc:'数字排与常用符号',
+      pool: { en:'1234567890-=[];\',./', zh:'一二三四五六七八九零', mix:'123一二三456四五六' } },
+    { id:9, title:'常用单词', keys:'高频词汇', desc:'高频英文单词练习',
+      pool: { en:'the be to of and a in that have it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what when which can about up out many then them these some how', zh:'这 是 到 的 和 一 在 那 有 它 为 不 上 和 他 如 你 做 在 这 但 他 的 由 从 他 们 我 说 她 或 将 我 全 那 什 当 哪 可 以 关 于 上 出 许 多 然 后 他 些 些 如 何', mix:'the这 be是 to到 of的 and和 a一 in在 that那 have有 it它 for为 not不 on上 with和' } },
+    { id:10, title:'句子与段落', keys:'全部按键', desc:'完整句子，终极挑战',
+      pool: { en:'the quick brown fox jumps over lazy dog she sells seashells by seashore journey thousand miles begins single step practice makes perfect success not final failure fatal future belongs those who believe their dreams', zh:'敏捷的棕色狐狸跳过了懒狗 她在海边卖贝壳 千里之行始于一步 熟能生巧 成功不是终点失败也非致命 未来属于那些相信自己梦想的人 生活中不是缺少美而是缺少发现美的眼睛', mix:'the quick 敏捷的 brown fox 棕色狐狸 jumps over 跳过 the lazy dog 懒狗 practice 熟能生巧 makes perfect 工欲善其事' } }
+];
+
+// ==================== 自由练习文本库 ====================
+const textBank = {
+    easy: {
+        chinese: ['你好世界','努力学习','天天向上','快乐生活','美好明天','阳光灿烂','春暖花开','风和日丽','鸟语花香','山清水秀','心想事成','万事如意','身体健康','工作顺利','家庭幸福'],
+        english: ['hello world','good morning','thank you','good luck','well done','nice day','keep going','never give up','practice makes perfect','learning is fun','work hard','stay focused','be happy','love life'],
+        mixed: ['Hello 你好','Good 好的','Thank 谢谢','Happy 快乐','Love 爱','Study 学习','Work 工作','Life 生活','Time 时间','World 世界']
+    },
+    medium: {
+        chinese: ['今天天气真好，适合出去走走。','学习使人进步，懒惰使人落后。','书籍是人类进步的阶梯。','知识就是力量，学习改变命运。','成功源于努力，失败始于放弃。','千里之行，始于足下。','宝剑锋从磨砺出，梅花香自苦寒来。','不积跬步，无以至千里。'],
+        english: ['The quick brown fox jumps over the lazy dog.','Practice makes perfect, keep going!','Success is not final, failure is not fatal.','The only way to do great work is to love what you do.','In the middle of difficulty lies opportunity.','Life is what happens when you are busy making other plans.','The future belongs to those who believe in their dreams.','It does not matter how slowly you go as long as you do not stop.'],
+        mixed: ['Learning 学习 is a lifelong journey.','Success 成功 comes from hard work.','Time 时间 flies like an arrow.','Knowledge 知识 is power 力量.','Dream 梦想 big and work hard.']
+    },
+    hard: {
+        chinese: ['人生就像一场旅行，不必在乎目的地，在乎的是沿途的风景以及看风景的心情，让心灵去旅行，去感受生活中的美好。','成功不是将来才有的，而是从决定去做的那一刻起，持续累积而成。每一个成功者都有一个开始，勇于开始，才能找到成功的路。','生活总是让我们遍体鳞伤，但到后来，那些受伤的地方一定会变成我们最强壮的地方。不要放弃，坚持就是胜利。','读书破万卷，下笔如有神。书山有路勤为径，学海无涯苦作舟。读书使人充实，讨论使人机智，笔记使人准确。'],
+        english: ['The greatest glory in living lies not in never falling, but in rising every time we fall. The way to get started is to quit talking and begin doing.','Success is not the key to happiness. Happiness is the key to success. If you love what you are doing, you will be successful.','Your time is limited, so do not waste it living someone else life. Do not be trapped by dogma which is living with the results of other people thinking.','The only impossible journey is the one you never begin. Believe you can and you are halfway there. The future belongs to those who believe in the beauty of their dreams.'],
+        mixed: ['Life 生活 is like a box of chocolates 巧克力, you never know what you are going to get 得到.','The best time 时间 to plant a tree 树 was twenty years ago. The second best time is now 现在.','Success 成功 is not final, failure 失败 is not fatal 致命的: it is the courage 勇气 to continue that counts.']
+    }
+};
+
+// ==================== 手指-按键映射 ====================
+const FINGER_MAP = {
+    // 左手
+    'lp': ['`','1','q','a','z','tab','caps','shift_l','ctrl_l'],          // 左小指
+    'lr': ['2','w','s','x'],                                               // 左无名指
+    'lm': ['3','e','d','c'],                                               // 左中指
+    'li': ['4','5','r','t','f','g','v','b'],                               // 左食指
+    'lt': ['space_l'],                                                     // 左拇指
+    // 右手
+    'rt': ['space_r'],                                                     // 右拇指
+    'ri': ['6','7','y','u','h','j','n','m'],                               // 右食指
+    'rm': ['8','i','k',','],                                               // 右中指
+    'rr': ['9','o','l','.'],                                               // 右无名指
+    'rp': ['0','-','=','p','[',']','\\',';',"'",'/','enter','back','shift_r','ctrl_r'] // 右小指
+};
+
+const FINGER_COLORS = {
+    lp: '#ffe0e0', lr: '#ffeacc', lm: '#fff5cc', li: '#e0f5e0', lt: '#e0f0f5',
+    rt: '#e0e8f5', ri: '#e0e0f5', rm: '#ece0f5', rr: '#f5e0f0', rp: '#f5e0e5'
+};
+
+const FINGER_NAMES = {
+    lp: '左小指', lr: '左无名指', lm: '左中指', li: '左食指', lt: '左拇指',
+    rt: '右拇指', ri: '右食指', rm: '右中指', rr: '右无名指', rp: '右小指'
+};
+
+// 根据按键名获取手指class
+function getFingerClass(keyName) {
+    const k = keyName.toLowerCase();
+    for (const [finger, keys] of Object.entries(FINGER_MAP)) {
+        if (keys.includes(k)) return 'finger-' + finger;
+    }
+    return '';
+}
+
+// 根据按键名获取手指ID
+function getFingerId(keyName) {
+    const k = keyName.toLowerCase();
+    for (const [finger, keys] of Object.entries(FINGER_MAP)) {
+        if (keys.includes(k)) return finger;
+    }
+    return null;
+}
+
+// ==================== 虚拟键盘布局 ====================
+const KB_LAYOUT = [
+    [{k:'`'},{k:'1'},{k:'2'},{k:'3'},{k:'4'},{k:'5'},{k:'6'},{k:'7'},{k:'8'},{k:'9'},{k:'0'},{k:'-'},{k:'='},{k:'Back',c:'widest'}],
+    [{k:'Tab',c:'wide'},{k:'q'},{k:'w'},{k:'e'},{k:'r'},{k:'t'},{k:'y'},{k:'u'},{k:'i'},{k:'o'},{k:'p'},{k:'['},{k:']'},{k:'\\'}],
+    [{k:'Caps',c:'wider'},{k:'a'},{k:'s'},{k:'d'},{k:'f'},{k:'g'},{k:'h'},{k:'j'},{k:'k'},{k:'l'},{k:';'},{k:"'"},{k:'Enter',c:'wider'}],
+    [{k:'Shift',c:'widest'},{k:'z'},{k:'x'},{k:'c'},{k:'v'},{k:'b'},{k:'n'},{k:'m'},{k:','},{k:'.'},{k:'/'},{k:'Shift',c:'widest'}],
+    [{k:'Ctrl',c:'wide'},{k:'Win',c:'wide'},{k:'Alt',c:'wide'},{k:'Space',c:'space'},{k:'Alt',c:'wide'},{k:'Win',c:'wide'},{k:'Ctrl',c:'wide'}]
+];
+
+// ==================== 状态 ====================
+let currentMode = 'stage';   // 'stage' | 'free'
+let currentPage = 'overview'; // 'overview' | 'detail' | 'free'
+let currentLang = 'english';
+let currentText = '';
+let currentIndex = 0;
+let startTime = null;
+let timerInterval = null;
+let errors = 0;
+let totalTyped = 0;
+let isRunning = false;
+let selectedStage = 0;
+let currentRound = 1;
+let roundStars = [0, 0, 0];
+let stageProgress = {};
+try { stageProgress = JSON.parse(localStorage.getItem('kbStageProgress2')) || {}; } catch(e) { stageProgress = {}; }
+
+const $ = id => document.getElementById(id);
+
+// ==================== 随机练习生成器 ====================
+function shuffle(str) {
+    const arr = str.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join('');
+}
+
+function generateRoundText(stage, round, lang) {
+    const pool = stage.pool;
+    let chars = '';
+    if (lang === 'english') chars = pool.en;
+    else if (lang === 'chinese') chars = pool.zh;
+    else chars = pool.mix;
+
+    if (!chars) chars = pool.en; // fallback
+
+    // 根据难度决定长度和结构
+    const lengths = { 1: [8, 14], 2: [16, 26], 3: [28, 45] };
+    const [minLen, maxLen] = lengths[round];
+    const targetLen = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
+
+    // 完全随机打乱生成
+    let result = '';
+    while (result.length < targetLen) {
+        const shuffled = shuffle(chars);
+        // 随机插入空格（英文模式）
+        if (lang === 'english' && result.length > 0 && Math.random() < 0.15) {
+            result += ' ';
+        }
+        result += shuffled;
+    }
+    result = result.substring(0, targetLen);
+
+    // 确保不以空格结尾
+    return result.trim();
+}
+
+// ==================== 虚拟键盘 ====================
+function renderKeyboard() {
+    KB_LAYOUT.forEach((row, ri) => {
+        const rowEl = $('kb-row-' + ri);
+        rowEl.innerHTML = '';
+        row.forEach(key => {
+            const el = document.createElement('div');
+            const fingerCls = getFingerClass(key.k);
+            el.className = 'kb-key' + (key.c ? ' ' + key.c : '') + (fingerCls ? ' ' + fingerCls : '');
+            el.dataset.key = key.k.toLowerCase();
+            el.textContent = key.k;
+            rowEl.appendChild(el);
+        });
+    });
+    // 渲染手指图例
+    const legend = $('finger-legend');
+    legend.innerHTML = '';
+    const order = ['lp','lr','lm','li','lt','rt','ri','rm','rr','rp'];
+    order.forEach((f, i) => {
+        if (i === 5) { // 左右手之间加分隔
+            const sep = document.createElement('span');
+            sep.className = 'finger-legend-sep';
+            sep.textContent = '│';
+            legend.appendChild(sep);
+        }
+        const item = document.createElement('div');
+        item.className = 'finger-legend-item';
+        item.innerHTML = `<div class="finger-dot" style="background:${FINGER_COLORS[f]}"></div><span>${FINGER_NAMES[f]}</span>`;
+        legend.appendChild(item);
+    });
+}
+function highlightKeyboard(char) {
+    const lower = char.toLowerCase();
+    document.querySelectorAll('.kb-key').forEach(el => {
+        el.classList.remove('highlight', 'dim');
+        if (el.dataset.key === lower) el.classList.add('highlight');
+        else el.classList.add('dim');
+    });
+}
+function clearKeyboardHighlight() {
+    document.querySelectorAll('.kb-key').forEach(el => el.classList.remove('highlight', 'dim', 'pressed'));
+}
+function flashKey(char) {
+    const lower = char.toLowerCase();
+    document.querySelectorAll('.kb-key').forEach(el => {
+        if (el.dataset.key === lower) {
+            el.classList.add('pressed');
+            setTimeout(() => el.classList.remove('pressed'), 150);
+        }
+    });
+}
+
+// ==================== 页面导航 ====================
+function showPage(page) {
+    currentPage = page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    $('page-' + page).classList.add('active');
+
+    // 练习区域显示逻辑
+    const showPractice = page === 'detail' || page === 'free';
+    $('practice-section').style.display = showPractice ? 'block' : 'none';
+    $('lang-switch').style.display = (currentMode === 'stage' && page === 'overview') || (currentMode === 'stage' && page === 'detail') ? 'flex' : (currentMode === 'free' ? 'none' : 'flex');
+
+    if (page === 'overview') {
+        resetPractice();
+        renderOverview();
+    }
+}
+
+// ==================== 总览页渲染 ====================
+function renderOverview() {
+    const grid = $('overview-grid');
+    grid.innerHTML = '';
+    STAGES.forEach((stage, idx) => {
+        const unlocked = idx === 0 || stageProgress[STAGES[idx - 1].id]?.completed;
+        const prog = stageProgress[stage.id];
+        const completed = prog?.completed;
+        const totalStars = prog?.stars || 0;
+        const rStars = prog?.roundStars || [0, 0, 0];
+        const doneRounds = rStars.filter(s => s > 0).length;
+
+        const card = document.createElement('div');
+        card.className = 'overview-card' + (!unlocked ? ' locked' : '') + (completed ? ' completed' : '');
+
+        const pct = Math.round((doneRounds / 3) * 100);
+        card.innerHTML = `
+            <div class="overview-header">
+                <div class="ov-num">${!unlocked ? '🔒' : stage.id}</div>
+                <div class="ov-title">${stage.title}</div>
+            </div>
+            <div class="ov-keys">${stage.keys}</div>
+            <div class="ov-desc">${stage.desc}</div>
+            <div class="ov-progress">
+                <div class="ov-progress-bar"><div class="ov-progress-fill" style="width:${pct}%"></div></div>
+                <div class="ov-rounds">
+                    <div class="ov-round-dot ${rStars[0]>0?'done':''}">${rStars[0]>0?'✓':'1'}</div>
+                    <span>简单</span>
+                    <div class="ov-round-dot ${rStars[1]>0?'done':''}">${rStars[1]>0?'✓':'2'}</div>
+                    <span>中等</span>
+                    <div class="ov-round-dot ${rStars[2]>0?'done':''}">${rStars[2]>0?'✓':'3'}</div>
+                    <span>困难</span>
+                </div>
+            </div>
+            <div class="ov-stars">${'★'.repeat(totalStars)}${'☆'.repeat(9 - totalStars)}</div>
+        `;
+        if (unlocked) {
+            card.addEventListener('click', () => enterStage(idx));
+        }
+        grid.appendChild(card);
+    });
+}
+
+// ==================== 进入关卡详情 ====================
+function enterStage(idx) {
+    selectedStage = idx;
+    currentRound = 1;
+    const prog = stageProgress[STAGES[idx].id];
+    roundStars = prog?.roundStars ? [...prog.roundStars] : [0, 0, 0];
+    renderDetailPage();
+    showPage('detail');
+}
+
+function renderDetailPage() {
+    const stage = STAGES[selectedStage];
+    const prog = stageProgress[stage.id];
+    const rStars = prog?.roundStars || [0, 0, 0];
+
+    $('detail-header').innerHTML = `
+        <div class="detail-num">${stage.id}</div>
+        <div class="detail-info">
+            <div class="detail-title">${stage.title}</div>
+            <div class="detail-keys">${stage.keys}</div>
+            <div class="detail-desc">${stage.desc}</div>
+        </div>
+    `;
+
+    const roundNames = ['简单', '中等', '困难'];
+    const tabs = $('round-tabs');
+    tabs.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+        const unlocked = i === 0 || rStars[i - 1] > 0;
+        const stars = rStars[i];
+        const tab = document.createElement('div');
+        tab.className = 'round-tab' + (i + 1 === currentRound ? ' active' : '') + (!unlocked ? ' locked' : '') + (stars > 0 ? ' completed' : '');
+        tab.innerHTML = `
+            <div class="round-tab-name">第${i + 1}局 · ${roundNames[i]}</div>
+            <div class="round-tab-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        `;
+        if (unlocked) {
+            tab.addEventListener('click', () => {
+                currentRound = i + 1;
+                resetPractice();
+                renderDetailPage();
+            });
+        }
+        tabs.appendChild(tab);
+    }
+
+    resetPractice();
+}
+
+// ==================== 核心打字逻辑 ====================
+function renderText() {
+    let html = '';
+    for (let i = 0; i < currentText.length; i++) {
+        let cls = 'char';
+        if (i < currentIndex) cls += $('typing-input').value[i] === currentText[i] ? ' correct' : ' incorrect';
+        else if (i === currentIndex) cls += ' current';
+        html += `<span class="${cls}">${currentText[i] === ' ' ? '&nbsp;' : currentText[i]}</span>`;
+    }
+    $('text-display').innerHTML = html;
+    if (currentIndex < currentText.length) highlightKeyboard(currentText[currentIndex]);
+    else clearKeyboardHighlight();
+}
+
+function updateStats() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    $('time').textContent = elapsed;
+    const minutes = elapsed / 60;
+    $('wpm').textContent = minutes > 0 ? Math.round(currentIndex / minutes) : 0;
+    const acc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+    $('accuracy').textContent = acc + '%';
+    $('errors').textContent = errors;
+    $('progress-fill').style.width = (currentIndex / currentText.length * 100) + '%';
+}
+
+function startTimer() { timerInterval = setInterval(updateStats, 100); }
+function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+function calcStars(acc, wpm) {
+    if (acc >= 98 && wpm >= 60) return 3;
+    if (acc >= 90 && wpm >= 30) return 3;
+    if (acc >= 85 && wpm >= 20) return 2;
+    return 1;
+}
+
+function startPractice() {
+    if (currentMode === 'stage') {
+        currentText = generateRoundText(STAGES[selectedStage], currentRound, currentLang);
+    } else {
+        const d = $('difficulty').value;
+        const c = $('content-type').value;
+        const texts = textBank[d][c];
+        currentText = texts[Math.floor(Math.random() * texts.length)];
+    }
+    currentIndex = 0; errors = 0; totalTyped = 0;
+    startTime = Date.now(); isRunning = true;
+    $('typing-input').value = '';
+    $('typing-input').disabled = false;
+    $('typing-input').focus();
+    renderText(); startTimer();
+    $('start-btn').textContent = '打字中...';
+    $('start-btn').disabled = true;
+}
+
+function resetPractice() {
+    stopTimer(); isRunning = false;
+    currentIndex = 0; errors = 0; totalTyped = 0;
+    $('typing-input').value = ''; $('typing-input').disabled = true;
+    $('time').textContent = '0'; $('wpm').textContent = '0';
+    $('accuracy').textContent = '100%'; $('errors').textContent = '0';
+    $('progress-fill').style.width = '0%';
+    clearKeyboardHighlight();
+    $('start-btn').textContent = '开始练习';
+    $('start-btn').disabled = false;
+    if (currentMode === 'stage' && currentPage === 'detail') {
+        $('text-display').innerHTML = '<span style="color:#888;">选择难度，点击"开始练习"</span>';
+    } else if (currentMode === 'free') {
+        $('text-display').innerHTML = '<span style="color:#888;">选择难度和内容，点击"开始练习"</span>';
+    }
+}
+
+function showResult() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = elapsed / 60;
+    const wpm = minutes > 0 ? Math.round(currentText.length / minutes) : 0;
+    const acc = totalTyped > 0 ? Math.round(((totalTyped - errors) / totalTyped) * 100) : 100;
+    $('final-time').textContent = elapsed;
+    $('final-wpm').textContent = wpm;
+    $('final-accuracy').textContent = acc + '%';
+    $('final-errors').textContent = errors;
+
+    const stars = calcStars(acc, wpm);
+    $('result-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+
+    if (currentMode === 'stage') {
+        const roundNames = ['简单', '中等', '困难'];
+        $('result-round-info').textContent = `第 ${selectedStage + 1} 关 · 第 ${currentRound} 局 (${roundNames[currentRound - 1]})`;
+        roundStars[currentRound - 1] = Math.max(roundStars[currentRound - 1], stars);
+
+        // 保存进度
+        const stage = STAGES[selectedStage];
+        const totalStars = roundStars.reduce((a, b) => a + b, 0);
+        const prev = stageProgress[stage.id];
+        if (!prev || totalStars > (prev.stars || 0)) {
+            stageProgress[stage.id] = { completed: true, stars: totalStars, roundStars: [...roundStars] };
+            try { localStorage.setItem('kbStageProgress2', JSON.stringify(stageProgress)); } catch(e) {}
+        }
+
+        const hasNextRound = currentRound < 3;
+        const hasNextStage = selectedStage < STAGES.length - 1;
+        $('next-round-btn').style.display = hasNextRound ? 'inline-block' : 'none';
+        $('next-stage-btn').style.display = (!hasNextRound && hasNextStage) ? 'inline-block' : 'none';
+        $('result-title').textContent = stars >= 2 ? '🎉 太棒了！' : '💪 继续加油！';
+    } else {
+        $('result-round-info').textContent = '';
+        $('next-round-btn').style.display = 'none';
+        $('next-stage-btn').style.display = 'none';
+        $('result-title').textContent = '🎉 练习完成！';
+    }
+    $('result-modal').style.display = 'flex';
+}
+
+// ==================== 事件绑定 ====================
+
+// 模式切换
+document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentMode = tab.dataset.mode;
+        if (currentMode === 'stage') showPage('overview');
+        else showPage('free');
+    });
+});
+
+// 语言切换
+document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLang = btn.dataset.lang;
+    });
+});
+
+// 返回按钮
+$('back-btn').addEventListener('click', () => showPage('overview'));
+
+// 开始/重置
+$('start-btn').addEventListener('click', startPractice);
+$('reset-round-btn').addEventListener('click', () => {
+    const stage = STAGES[selectedStage];
+    if (stageProgress[stage.id]) {
+        stageProgress[stage.id].roundStars[currentRound - 1] = 0;
+        stageProgress[stage.id].stars = stageProgress[stage.id].roundStars.reduce((a,b)=>a+b,0);
+        try { localStorage.setItem('kbStageProgress2', JSON.stringify(stageProgress)); } catch(e) {}
+        roundStars[currentRound - 1] = 0;
+    }
+    renderDetailPage();
+});
+$('free-start-btn').addEventListener('click', startPractice);
+
+// 结果弹窗按钮
+$('retry-btn').addEventListener('click', () => {
+    $('result-modal').style.display = 'none';
+    resetPractice();
+    startPractice();
+});
+$('next-round-btn').addEventListener('click', () => {
+    $('result-modal').style.display = 'none';
+    if (currentRound < 3) { currentRound++; renderDetailPage(); startPractice(); }
+});
+$('next-stage-btn').addEventListener('click', () => {
+    $('result-modal').style.display = 'none';
+    if (selectedStage < STAGES.length - 1) {
+        selectedStage++;
+        currentRound = 1;
+        roundStars = stageProgress[STAGES[selectedStage].id]?.roundStars ? [...stageProgress[STAGES[selectedStage].id].roundStars] : [0,0,0];
+        renderDetailPage();
+        startPractice();
+    }
+});
+$('result-modal').addEventListener('click', e => {
+    if (e.target === $('result-modal')) {
+        $('result-modal').style.display = 'none';
+        resetPractice();
+    }
+});
+
+// 输入处理
+$('typing-input').addEventListener('input', e => {
+    if (!isRunning) return;
+    const val = e.target.value;
+    const len = val.length;
+    if (len > currentIndex) {
+        totalTyped++;
+        if (val[len - 1] !== currentText[currentIndex]) errors++;
+        flashKey(val[len - 1]);
+        currentIndex = len;
+    } else if (len < currentIndex) {
+        currentIndex = len;
+    }
+    renderText();
+    if (currentIndex >= currentText.length) {
+        stopTimer(); isRunning = false;
+        $('typing-input').disabled = true;
+        updateStats();
+        setTimeout(showResult, 300);
+    }
+});
+$('typing-input').addEventListener('paste', e => e.preventDefault());
+
+// ==================== 快捷键 ====================
+document.addEventListener('keydown', e => {
+    // Esc - 返回
+    if (e.key === 'Escape') {
+        if ($('result-modal').style.display === 'flex') {
+            $('result-modal').style.display = 'none';
+            resetPractice();
+            return;
+        }
+        if (currentPage === 'detail') { showPage('overview'); return; }
+        resetPractice();
+    }
+    // R - 再来一次
+    if ((e.key === 'r' || e.key === 'R') && $('result-modal').style.display === 'flex') {
+        e.preventDefault();
+        $('result-modal').style.display = 'none';
+        resetPractice();
+        startPractice();
+    }
+    // N - 下一局/下一关
+    if ((e.key === 'n' || e.key === 'N') && $('result-modal').style.display === 'flex') {
+        e.preventDefault();
+        if (currentMode !== 'stage') return;
+        if (currentRound < 3) {
+            $('result-modal').style.display = 'none';
+            currentRound++;
+            renderDetailPage();
+            startPractice();
+        } else if (selectedStage < STAGES.length - 1) {
+            $('result-modal').style.display = 'none';
+            selectedStage++;
+            currentRound = 1;
+            roundStars = stageProgress[STAGES[selectedStage].id]?.roundStars ? [...stageProgress[STAGES[selectedStage].id].roundStars] : [0,0,0];
+            renderDetailPage();
+            startPractice();
+        }
+    }
+});
+
+// ==================== 初始化 ====================
+renderKeyboard();
+showPage('overview');
+</script>
+</body>
+</html>
